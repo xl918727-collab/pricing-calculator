@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>定价测算工具 - eBay 4-6月实际财报数据</title>
+<title>定价测算工具 - eBay 4-5月实际财报数据</title>
 <style>
 :root { --bg:#f0f2f5; --card:#fff; --p:#2563eb; --ph:#1d4ed8; --t:#1e293b; --ts:#64748b; --b:#e2e8f0; --abg:#eff6ff; --ab:#93c5fd; --rbg:#f0fdf4; --rb:#bbf7d0; --s:0 1px 3px rgba(0,0,0,.06); --r:8px; }
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -76,7 +76,7 @@ tr.total td { border-top:2px solid #eab308; }
 <div class="container">
 <header>
 <h1>定价测算工具</h1>
-<p>基于 eBay 2026年4-6月实际财报数据 | 534条 SKU x 站点 成本基准 | 排除渠道其他费 & 税务成本</p>
+<p>基于 eBay 2026年4-5月实际财报数据 | 534条 SKU x 站点 成本基准 | 排除渠道其他费 & 税务成本</p>
 </header>
 <div class="grid">
 <div>
@@ -93,7 +93,7 @@ tr.total td { border-top:2px solid #eab308; }
 </div>
 <div id="skuInfo" style="display:none;margin-top:8px;padding:8px 10px;background:#f8fafc;border-radius:6px;font-size:12px;">
 <div class="info-row"><span class="l">品类</span><span class="v" id="infoCat">--</span></div>
-<div class="info-row"><span class="l">4-6月销量</span><span class="v" id="infoQty">--</span></div>
+<div class="info-row"><span class="l">4-5月销量</span><span class="v" id="infoQty">--</span></div>
 <div class="info-row"><span class="l">历史均价</span><span class="v" id="infoPrice">--</span></div>
 <div class="info-row"><span class="l">近三月毛利率</span><span class="v" id="infoMargin">--</span></div>
 </div>
@@ -105,10 +105,10 @@ tr.total td { border-top:2px solid #eab308; }
 <div class="fg"><label>头程运费/件 <span class="u">原币</span></label><input type="number" id="firstLeg" class="auto" step="0.01" placeholder="自动匹配"></div>
 <div class="fg"><label>尾程配送费/件 <span class="u">原币</span></label><input type="number" id="delivery" class="auto" step="0.01" placeholder="自动匹配"></div>
 </div>
-<div style="font-size:11px;color:var(--ts);margin-top:4px;">以上为4-6月实际均值（总成本 / 总销量），可手动覆盖</div>
+<div style="font-size:11px;color:var(--ts);margin-top:4px;">以上为4-5月实际均值（总成本 / 总销量），可手动覆盖</div>
 </div>
 <div class="card">
-<div class="card-title"><span class="bar"></span>费用占比参考 <span class="badge">4-6月实际均值</span></div>
+<div class="card-title"><span class="bar"></span>费用占比参考 <span class="badge">4-5月实际均值</span></div>
 <div class="fee-grid">
 <div class="fg"><label>平台佣金 <span class="u">%</span></label><input type="number" id="commission" class="auto" step="0.1" placeholder="自动"></div>
 <div class="fg"><label>广告费 <span class="u">%</span></label><input type="number" id="ad" class="auto" step="0.1" placeholder="自动"></div>
@@ -164,9 +164,9 @@ tr.total td { border-top:2px solid #eab308; }
 </div>
 <div class="notes">
 <b>说明：</b><br>
-1. 数据来源：eBay平台2026年4-6月「全渠道财务毛利润明细数据（绩效）」各项明细表；<br>
-2. 固定成本（采购/头程/尾程）= 财报总成本/总销量，为该SKU x 站点4-6月实际均值；<br>
-3. 费用占比默认值为该SKU x 站点4-6月实际占比，全部可手动覆盖；<br>
+1. 数据来源：eBay平台2026年4-5月「全渠道财务毛利润明细数据（绩效）」各项明细表；<br>
+2. 固定成本（采购/头程/尾程）= 财报总成本/总销量，为该SKU x 站点4-5月实际均值；<br>
+3. 费用占比默认值为该SKU x 站点4-5月实际占比，全部可手动覆盖；<br>
 4. 已排除：渠道其他费用(AE列) 和 税务成本(AI列)；<br>
 5. 公式：售价 = (采购+头程+尾程) / (1 - 佣金% - 广告% - 仓储% - 退款% - VAT% - 报损% - 调整% - 其他% - 利润率%) + 其他费用(固定)；<br>
 6. 选择SKU后站点下拉仅显示该SKU有数据的站点。
