@@ -106,23 +106,23 @@ tr.total td { border-top:2px solid #eab308; }
 <div class="card">
 <div class="card-title"><span class="bar"></span>固定成本 <span class="badge">从财报自动匹配</span></div>
 <div class="row row3">
-<div class="fg"><label>采购成本/件 <span class="u">原币</span></label><input type="number" id="cogs" class="auto" step="0.01" 
-<div class="fg"><span id="cogsMom" class="mom-tag"></span><label>头程运费/件 <span class="u">原币</span></label><input type="number" id="firstLeg" class="auto" step="0.01" 
-<div class="fg"><span id="firstLegMom" class="mom-tag"></span><label>尾程配送费/件 <span class="u">原币</span></label><input type="number" id="delivery" class="auto" step="0.01" 
-</div><span id="deliveryMom" class="mom-tag"></span>
-<div style="font-size:11px;color:var(--ts);margin-top:4px;">以上为4-5月实际均值（总成本 / 总销量），可手动覆盖</div>
+<div class="fg"><label>采购成本/件 <span class="u cost-label">$</span></label><input type="number" id="cogs" class="auto" step="0.01" placeholder="自动匹配"><span id="cogsMom" class="mom-tag"></span></div>
+<div class="fg"><label>头程运费/件 <span class="u cost-label">$</span></label><input type="number" id="firstLeg" class="auto" step="0.01" placeholder="自动匹配"><span id="firstLegMom" class="mom-tag"></span></div>
+<div class="fg"><label>尾程配送费/件 <span class="u cost-label">$</span></label><input type="number" id="delivery" class="auto" step="0.01" placeholder="自动匹配"><span id="deliveryMom" class="mom-tag"></span></div>
+</div>
+<div style="font-size:11px;color:var(--ts);margin-top:4px;">以上为4-5月实际均值（总成本 / 总销量），可手动覆盖（数据源为USD，已按汇率转为站点币种）</div>
 </div>
 <div class="card">
 <div class="card-title"><span class="bar"></span>费用占比参考 <span class="badge">4-5月实际均值</span></div>
 <div class="fee-grid">
-<div class="fg"><label>平台佣金 <span class="u">%</span></label><input type="number" id="commission" class="auto" step="0.1" placeholder="自动"><span id="commissionMom" class="mom-tag"></span><span id="commissionMom" class="mom-tag"></span></div>
-<div class="fg"><label>广告费 <span class="u">%</span></label><input type="number" id="ad" class="auto" step="0.1" placeholder="自动"><span id="adMom" class="mom-tag"></span><span id="adMom" class="mom-tag"></span></div>
-<div class="fg"><label>仓储费 <span class="u">%</span></label><input type="number" id="storage" class="auto" step="0.1" placeholder="自动"><span id="storageMom" class="mom-tag"></span><span id="storageMom" class="mom-tag"></span></div>
-<div class="fg"><label>退款损失 <span class="u">%</span></label><input type="number" id="refund" class="auto" step="0.1" placeholder="自动"><span id="refundMom" class="mom-tag"></span><span id="refundMom" class="mom-tag"></span></div>
-<div class="fg"><label>VAT税费 <span class="u">%</span></label><input type="number" id="vat" class="auto" step="0.1" placeholder="自动"><span id="vatMom" class="mom-tag"></span><span id="vatMom" class="mom-tag"></span></div>
-<div class="fg"><label>报损盘亏 <span class="u">%</span></label><input type="number" id="loss" class="auto" step="0.1" placeholder="自动"><span id="lossMom" class="mom-tag"></span><span id="lossMom" class="mom-tag"></span></div>
-<div class="fg"><label>费用调整 <span class="u">%</span></label><input type="number" id="adj" class="auto" step="0.1" placeholder="自动"><span id="adjMom" class="mom-tag"></span><span id="adjMom" class="mom-tag"></span></div>
-<div class="fg"><label>其他费用(固定) <span class="u">原币</span></label><input type="number" id="otherFee" step="0.01" value="0" placeholder="0"></div>
+<div class="fg"><label>平台佣金 <span class="u">%</span></label><input type="number" id="commission" class="auto" step="0.1" placeholder="自动"><span id="commissionMom" class="mom-tag"></span></div>
+<div class="fg"><label>广告费 <span class="u">%</span></label><input type="number" id="ad" class="auto" step="0.1" placeholder="自动"><span id="adMom" class="mom-tag"></span></div>
+<div class="fg"><label>仓储费 <span class="u">%</span></label><input type="number" id="storage" class="auto" step="0.1" placeholder="自动"><span id="storageMom" class="mom-tag"></span></div>
+<div class="fg"><label>退款损失 <span class="u">%</span></label><input type="number" id="refund" class="auto" step="0.1" placeholder="自动"><span id="refundMom" class="mom-tag"></span></div>
+<div class="fg"><label>VAT税费 <span class="u">%</span></label><input type="number" id="vat" class="auto" step="0.1" placeholder="自动"><span id="vatMom" class="mom-tag"></span></div>
+<div class="fg"><label>报损盘亏 <span class="u">%</span></label><input type="number" id="loss" class="auto" step="0.1" placeholder="自动"><span id="lossMom" class="mom-tag"></span></div>
+<div class="fg"><label>费用调整 <span class="u">%</span></label><input type="number" id="adj" class="auto" step="0.1" placeholder="自动"><span id="adjMom" class="mom-tag"></span></div>
+<div class="fg"><label>其他费用(固定) <span class="u cost-label">$</span></label><input type="number" id="otherFee" step="0.01" value="0" placeholder="0"></div>
 </div>
 </div>
 </div>
@@ -190,9 +190,16 @@ DB.forEach(function(d) {
 function momNum(val, entry, field) {
   if (!entry._has_prev || !entry.mom || entry.mom[field]===undefined) return "";
   var d = entry.mom[field];
-  if (d === 0) return ' <span class="mom-flat">→</span>';
-  if (d > 0) return ' <span class="mom-up">↑'+d.toFixed(1)+'</span>';
-  return ' <span class="mom-down">↓'+Math.abs(d).toFixed(1)+'</span>';
+  // MoM delta is in USD. Convert cost fields to local currency.
+  var costFields = ['cogs_pu','first_leg_pu','delivery_pu','avg_price'];
+  if (costFields.indexOf(field) !== -1) {
+    var rates = getFxRates();
+    var fxCode = SITE_FX[document.getElementById('siteSel').value];
+    if (rates && rates[fxCode]) d = d * rates[fxCode];
+  }
+  if (Math.abs(d) < 0.01) return ' <span class="mom-flat">→</span>';
+  if (d > 0) return ' <span class="mom-up">↑'+d.toFixed(2)+'</span>';
+  return ' <span class="mom-down">↓'+Math.abs(d).toFixed(2)+'</span>';
 }
 function momPct(val, entry, field) {
   if (!entry._has_prev || !entry.mom || entry.mom[field]===undefined) return "";
@@ -414,6 +421,8 @@ function onSiteChange() {
   document.getElementById('infoQty').textContent = entry.qty + ' 件';
   document.getElementById('infoPrice').innerHTML = fmtPriceWithCNY(entry.avg_price, site) + ' <span class="mom-tag">' + momNum(entry.avg_price, entry, 'avg_price') + '</span>';
   document.getElementById('infoMargin').innerHTML = (entry.margin > 0 ? entry.margin + '%' : (entry.margin < 0 ? entry.margin + '%' : '--')) + ' <span class="mom-tag">' + momPct(entry.margin, entry, 'margin') + '</span>';
+  // Update cost labels to show site currency
+  updateCostLabels(site);
   setAuto('cogs', entry.cogs_pu, entry, 'cogs_pu', 'num');
   setAuto('firstLeg', entry.first_leg_pu, entry, 'first_leg_pu', 'num');
   setAuto('delivery', entry.delivery_pu, entry, 'delivery_pu', 'num');
@@ -428,7 +437,17 @@ function onSiteChange() {
 
 function setAuto(id, val, entry, field, momFunc) {
   var el = document.getElementById(id);
-  el.value = val > 0 ? val : '';
+  // Convert USD costs to site currency for display (except 'commission' etc which are percentages)
+  var site = document.getElementById('siteSel').value;
+  var isCost = (id === 'cogs' || id === 'firstLeg' || id === 'delivery');
+  if (isCost && val > 0) {
+    var rates = getFxRates();
+    var fxCode = SITE_FX[site];
+    if (rates && rates[fxCode]) {
+      val = (val * rates[fxCode]);
+    }
+  }
+  el.value = val > 0 ? val.toFixed(2) : '';
   el.className = 'auto';
   var momEl = document.getElementById(id + 'Mom');
   if (momEl && entry && field) {
@@ -442,6 +461,12 @@ function clearAutoFields() {
     document.getElementById(id).className = 'auto';
     var m = document.getElementById(id+'Mom'); if(m) m.innerHTML='';
   });
+}
+
+function updateCostLabels(site) {
+  var cur = CURRENCY[site] || '';
+  var labels = document.querySelectorAll('.cost-label');
+  labels.forEach(function(el) { el.textContent = cur; });
 }
 
 function calc() {
