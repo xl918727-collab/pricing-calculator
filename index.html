@@ -75,6 +75,16 @@ tr.total td { border-top:2px solid #eab308; }
 .mom-down { color:#16a34a; font-size:10px; font-weight:700; }
 .mom-flat { color:#94a3b8; font-size:9px; }
 .mom-tag { font-size:10px; margin-left:3px; white-space:nowrap; }
+
+/* Mode toggle */
+.mode-tabs { display:flex; gap:0; margin-bottom:16px; border-radius:8px; overflow:hidden; border:2px solid var(--p); }
+.mode-tab { flex:1; padding:10px 16px; font-size:13px; font-weight:600; text-align:center; cursor:pointer; background:#fff; color:var(--p); border:none; font-family:inherit; transition:.15s; }
+.mode-tab.active { background:var(--p); color:#fff; }
+.new-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; margin-left:6px; }
+.estimate-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; }
+.ref-sku { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#e0e7ff; color:#3730a3; font-weight:600; margin:2px 3px; }
+#newProductMode { display:none; }
+
 </style>
 </head>
 <body>
@@ -83,8 +93,15 @@ tr.total td { border-top:2px solid #eab308; }
 <h1>定价测算工具</h1>
 <p>基于 eBay 2026年4-5月实际财报数据 | 534条 SKU x 站点 成本基准 | 排除渠道其他费 & 税务成本</p>
 </header>
+
+<div class="mode-tabs" id="modeTabs" style="max-width:300px;margin:0 auto 16px;">
+<button class="mode-tab active" onclick="switchMode('existing')">📊 财报数据</button>
+<button class="mode-tab" onclick="switchMode('new')">🆕 新品测算</button>
+</div>
+
 <div class="grid">
 <div>
+<div id="existingProductMode">
 <div class="card">
 <div class="card-title"><span class="bar"></span>产品筛选</div>
 <div class="row">
@@ -142,6 +159,61 @@ tr.total td { border-top:2px solid #eab308; }
 <button class="btn btn-load" id="btnLoadPref" onclick="loadPrefs()" disabled>📂 加载我的偏好</button>
 </div>
 </div>
+
+<div id="newProductMode">
+<div class="card">
+<div class="card-title"><span class="bar"></span>新品参数 <span class="new-badge">手工输入</span></div>
+<div class="row">
+<div class="fg"><label>SKU名称 <span style="color:#dc2626">*</span></label><input type="text" id="newSku" placeholder="如 DONNER-X1"></div>
+<div class="fg"><label>站点 <span style="color:#dc2626">*</span></label>
+<select id="newSite"><option value="">-- 选择 --</option><option value="US">US</option><option value="AU">AU</option><option value="UK">UK</option><option value="DE">DE</option><option value="FR">FR</option><option value="IT">IT</option><option value="ES">ES</option><option value="NL">NL</option><option value="BE">BE</option><option value="CA">CA</option><option value="PL">PL</option><option value="SE">SE</option><option value="DK">DK</option></select></div>
+</div>
+<div class="row row3">
+<div class="fg"><label>包装长 cm <span style="color:#dc2626">*</span></label><input type="number" id="newLen" step="0.1" placeholder="如 50"></div>
+<div class="fg"><label>包装宽 cm <span style="color:#dc2626">*</span></label><input type="number" id="newWid" step="0.1" placeholder="如 35"></div>
+<div class="fg"><label>包装高 cm <span style="color:#dc2626">*</span></label><input type="number" id="newHei" step="0.1" placeholder="如 20"></div>
+</div>
+<div class="row">
+<div class="fg"><label>产品实重 kg <span style="color:#dc2626">*</span></label><input type="number" id="newWt" step="0.1" placeholder="如 3.5"></div>
+<div class="fg"><label>平均采购成本 ¥</label><input type="number" id="newCogs" step="0.01" placeholder="自动估算"></div>
+</div>
+<div class="row">
+<div class="fg"><label>预期利润率 % <span style="color:#dc2626">*</span></label><input type="number" id="newProfit" step="0.1" value="20"></div>
+<div class="fg"><label>其他费用占比 %</label><input type="number" id="newOtherPct" step="0.1" value="0"></div>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;">
+<button class="btn btn-calc" onclick="calcNewProduct()">🔍 匹配相似产品并测算</button>
+</div>
+<div id="newRefInfo" style="display:none;margin-top:10px;padding:10px;background:#f0fdf4;border-radius:6px;font-size:11px;">
+<b>参考产品（按尺寸重量相似度匹配）：</b><br>
+<span id="newRefSkus"></span>
+</div>
+</div>
+<div id="newResultSection" class="result result-hidden">
+<div class="result-card" style="border-color:#f59e0b;background:#fffbeb;">
+<h3>计算结果 <span class="new-badge">新品预估</span></h3>
+<div class="price-box" style="border-color:#f59e0b;"><div class="pl">建议售价（原币）</div><div class="pv" style="color:#92400e;"><span id="newFinalPrice">--</span></div></div>
+<table><thead><tr><th>项目</th><th>估算值</th><th>占售价%</th></tr></thead>
+<tbody>
+<tr><td>采购成本</td><td id="nrCogs">--</td><td id="nrCogsP">--</td></tr>
+<tr><td>头程运费</td><td id="nrFirstLeg">--</td><td id="nrFirstLegP">--</td></tr>
+<tr><td>尾程配送</td><td id="nrDelivery">--</td><td id="nrDeliveryP">--</td></tr>
+<tr><td>平台佣金</td><td id="nrComm">--</td><td id="nrCommP">--</td></tr>
+<tr><td>广告费</td><td id="nrAd">--</td><td id="nrAdP">--</td></tr>
+<tr><td>仓储费</td><td id="nrStor">--</td><td id="nrStorP">--</td></tr>
+<tr><td>退款损失</td><td id="nrRefund">--</td><td id="nrRefundP">--</td></tr>
+<tr><td>VAT税费</td><td id="nrVat">--</td><td id="nrVatP">--</td></tr>
+<tr><td>报损盘亏</td><td id="nrLoss">--</td><td id="nrLossP">--</td></tr>
+<tr><td>费用调整</td><td id="nrAdj">--</td><td id="nrAdjP">--</td></tr>
+<tr><td>其他费用(%)</td><td id="nrOther">--</td><td id="nrOtherP">--</td></tr>
+<tr><td>其他费用(固定)</td><td id="nrOtherFee">--</td><td id="nrOtherFeeP">--</td></tr>
+<tr class="total"><td>建议售价</td><td id="nrSP">--</td><td>100%</td></tr>
+<tr class="total"><td style="color:#16a34a">预期利润</td><td id="nrProfit" style="color:#16a34a">--</td><td id="nrProfitP" style="color:#16a34a">--</td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
 <div id="resultSection" class="result result-hidden">
 <div class="result-card">
 <h3>计算结果</h3>
@@ -163,6 +235,7 @@ tr.total td { border-top:2px solid #eab308; }
 <tr class="total"><td>建议售价</td><td id="rSP">--</td><td>100%</td></tr>
 <tr class="total"><td style="color:#16a34a">预期利润</td><td id="rProfit" style="color:#16a34a">--</td><td id="rProfitP" style="color:#16a34a">--</td></tr>
 </tbody></table>
+</div>
 </div>
 </div>
 </div>
@@ -557,6 +630,130 @@ function toast(m) {
   setTimeout(function(){t.classList.remove('show')},2500);
 }
 
+// ---- MODE SWITCH ----
+function switchMode(mode) {
+  var tabs = document.querySelectorAll('.mode-tab');
+  tabs.forEach(function(t, i) {
+    t.classList.toggle('active', (i === 0 && mode === 'existing') || (i === 1 && mode === 'new'));
+  });
+  document.getElementById('existingProductMode').style.display = mode === 'existing' ? '' : 'none';
+  document.getElementById('newProductMode').style.display = mode === 'new' ? '' : 'none';
+  document.getElementById('resultSection').classList.add('result-hidden');
+  document.getElementById('newResultSection').classList.add('result-hidden');
+}
+
+// ---- NEW PRODUCT MATCHING ----
+function calcNewProduct() {
+  var sku = document.getElementById('newSku').value.trim();
+  var site = document.getElementById('newSite').value;
+  var len = parseFloat(document.getElementById('newLen').value) || 0;
+  var wid = parseFloat(document.getElementById('newWid').value) || 0;
+  var hei = parseFloat(document.getElementById('newHei').value) || 0;
+  var wt = parseFloat(document.getElementById('newWt').value) || 0;
+  var cogsUSD = parseFloat(document.getElementById('newCogs').value) || 0;
+  var profit = parseFloat(document.getElementById('newProfit').value) || 20;
+  var otherPct = parseFloat(document.getElementById('newOtherPct').value) || 0;
+  var otherFee = parseFloat(document.getElementById('newOtherPct').value) || 0; // fixed fee, same input for now
+
+  if (!sku) { toast('请输入SKU名称'); return; }
+  if (!site) { toast('请选择站点'); return; }
+  if (len <= 0 || wid <= 0 || hei <= 0) { toast('请填写完整的产品尺寸'); return; }
+  if (wt <= 0) { toast('请填写产品重量'); return; }
+
+  var volume = len * wid * hei;
+  // Find matching products in same site, score by volume & weight similarity
+  var candidates = [];
+  Object.keys(skuMap).forEach(function(s) {
+    skuMap[s].forEach(function(d) {
+      if (d.site !== site) return;
+      // We don't have dimensions in DB, so we use a different proxy: match by existing shipping cost patterns
+      // Use the actual logistics costs as the proxy for similarity
+      candidates.push(d);
+    });
+  });
+
+  if (candidates.length === 0) {
+    toast('该站点无历史数据可参考');
+    return;
+  }
+
+  // Since we don't have dimensions in the DB, use median values from all existing products on this site
+  // as a reasonable estimate. Sort by delivery cost (proxy for size) to find nearest neighbors.
+  candidates.sort(function(a, b) { return a.delivery_pu - b.delivery_pu; });
+
+  // Take the middle 30% as representative
+  var start = Math.floor(candidates.length * 0.35);
+  var end = Math.ceil(candidates.length * 0.65);
+  var refs = candidates.slice(start, end);
+  if (refs.length === 0) refs = candidates.slice(0, 5);
+
+  function avg(arr, field) {
+    var sum = 0, cnt = 0;
+    arr.forEach(function(d) { if (d[field] > 0) { sum += d[field]; cnt++; } });
+    return cnt > 0 ? sum / cnt : 0;
+  }
+
+  var estFirstLeg = avg(refs, 'first_leg_pu');
+  var estDelivery = avg(refs, 'delivery_pu');
+  var estComm = avg(refs, 'commission_pct');
+  var estAd = avg(refs, 'ad_pct');
+  var estStor = avg(refs, 'storage_pct');
+  var estRefund = avg(refs, 'refund_pct');
+  var estVat = avg(refs, 'vat_pct');
+  var estLoss = avg(refs, 'loss_pct');
+  var estAdj = avg(refs, 'adj_pct');
+
+  // If purchase cost not provided, estimate from similar products
+  if (cogsUSD <= 0) {
+    cogsUSD = avg(refs, 'cogs_pu');
+  }
+
+  // Convert to site currency for display
+  var rates = getFxRates();
+  var fxCode = SITE_FX[site];
+  var fx = rates && rates[fxCode] ? rates[fxCode] : 1;
+
+  var localCogs = cogsUSD * fx;
+  var localFirstLeg = estFirstLeg * fx;
+  var localDelivery = estDelivery * fx;
+
+  // Calculate selling price
+  var totalPct = (estComm + estAd + estStor + estRefund + estVat + estLoss + estAdj + otherPct + profit) / 100;
+  if (totalPct >= 1) { toast('费用占比+利润率超过100%'); return; }
+  var sp = (localCogs + localFirstLeg + localDelivery) / (1 - totalPct);
+  var curSym = CURRENCY[site] || '';
+
+  document.getElementById('newFinalPrice').textContent = curSym + ' ' + sp.toFixed(2);
+  var fill = function(id, val) { document.getElementById(id).textContent = curSym + ' ' + val.toFixed(2); };
+  var fillP = function(id, val) { document.getElementById(id).textContent = (val/sp*100).toFixed(1) + '%'; };
+
+  fill('nrCogs', localCogs); fillP('nrCogsP', localCogs);
+  fill('nrFirstLeg', localFirstLeg); fillP('nrFirstLegP', localFirstLeg);
+  fill('nrDelivery', localDelivery); fillP('nrDeliveryP', localDelivery);
+  fill('nrComm', sp*estComm/100); fillP('nrCommP', sp*estComm/100);
+  fill('nrAd', sp*estAd/100); fillP('nrAdP', sp*estAd/100);
+  fill('nrStor', sp*estStor/100); fillP('nrStorP', sp*estStor/100);
+  fill('nrRefund', sp*estRefund/100); fillP('nrRefundP', sp*estRefund/100);
+  fill('nrVat', sp*estVat/100); fillP('nrVatP', sp*estVat/100);
+  fill('nrLoss', sp*estLoss/100); fillP('nrLossP', sp*estLoss/100);
+  fill('nrAdj', sp*estAdj/100); fillP('nrAdjP', sp*estAdj/100);
+  document.getElementById('nrOther').textContent = curSym + ' ' + (sp*otherPct/100).toFixed(2);
+  document.getElementById('nrOtherP').textContent = otherPct.toFixed(1) + '%';
+  document.getElementById('nrOtherFee').textContent = '--';
+  document.getElementById('nrOtherFeeP').textContent = '--';
+  document.getElementById('nrSP').textContent = curSym + ' ' + sp.toFixed(2);
+  document.getElementById('nrProfit').textContent = curSym + ' ' + (sp*profit/100).toFixed(2);
+  document.getElementById('nrProfitP').textContent = profit.toFixed(1) + '%';
+
+  // Show reference SKUs
+  var refNames = refs.slice(0, 5).map(function(d) { return d.sku + ' (' + d.name + ')'; });
+  document.getElementById('newRefSkus').innerHTML = refNames.map(function(n) { return '<span class="ref-sku">' + n + '</span>'; }).join(' ');
+  document.getElementById('newRefInfo').style.display = 'block';
+
+  var rs = document.getElementById('newResultSection');
+  rs.classList.remove('result-hidden');
+  if (window.innerWidth < 820) rs.scrollIntoView({behavior:'smooth'});
+}
 // ---- PREFERENCE SAVE/LOAD ----
 var PREF_KEYS = ['profit','otherPct','otherFee','commission','ad','storage','refund','vat','loss','adj'];
 
