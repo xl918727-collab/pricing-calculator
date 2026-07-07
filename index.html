@@ -693,10 +693,12 @@ function calcNewProduct() {
       if (d.site !== site) return;
       if (d._vol <= 0 || d._wt <= 0) return;
       if (d.delivery_pu <= 0) return;
-      // Score: normalized volume diff + normalized weight diff
-      var volDiff = Math.abs(d._vol - inputVol) / Math.max(inputVol, 100);
-      var wtDiff = Math.abs(d._wt - wt);
-      var score = volDiff + wtDiff * 0.5;
+      // Score: use percentage-based diff for fair comparison across sizes
+      var avgVol = (inputVol + d._vol) / 2;
+      var volScore = avgVol > 0 ? Math.abs(d._vol - inputVol) / avgVol : 1;
+      var avgWt = (wt + d._wt) / 2;
+      var wtScore = avgWt > 0 ? Math.abs(d._wt - wt) / avgWt : 1;
+      var score = volScore * 0.4 + wtScore * 0.6;
       candidates.push({entry: d, score: score});
     });
   });
@@ -712,6 +714,10 @@ function calcNewProduct() {
   // Take top 5 most similar products as reference
   var refs = candidates.slice(0, 5).map(function(c) { return c.entry; });
 
+  // Warn if best match is still very different
+  var bestScore = candidates[0].score;
+  var matchQuality = bestScore < 0.15 ? '极好' : bestScore < 0.4 ? '良好' : bestScore < 0.8 ? '一般' : '较差';
+
   function avg(arr, field) {
     var sum = 0, cnt = 0;
     arr.forEach(function(d) { if (d[field] > 0) { sum += d[field]; cnt++; } });
@@ -721,13 +727,14 @@ function calcNewProduct() {
   var estDelivery = avg(refs, 'delivery_pu');
   document.getElementById('newDelivery').value = estDelivery.toFixed(2);
 
-  // Show reference info with real dimensions
-  var refInfo = refs.map(function(d) {
-    return d.sku + ' (' + d._len.toFixed(0) + 'x' + d._wid.toFixed(0) + 'x' + d._hei.toFixed(0) + 'cm ' + d._wt.toFixed(1) + 'kg $' + d.delivery_pu.toFixed(2) + ')';
+  // Show reference info with real dimensions + match quality
+  var refInfo = refs.map(function(d, i) {
+    var s = candidates[i].score;
+    return d.sku + ' (' + d._len.toFixed(0) + 'x' + d._wid.toFixed(0) + 'x' + d._hei.toFixed(0) + 'cm ' + d._wt.toFixed(1) + 'kg $' + d.delivery_pu.toFixed(2) + ' ≈' + s.toFixed(2) + ')';
   });
-  document.getElementById('newRefSkus').innerHTML = refInfo.map(function(n) {
-    return '<span class="ref-sku">' + n + '</span>';
-  }).join(' ');
+  document.getElementById('newRefSkus').innerHTML = 
+    '<span style="color:' + (bestScore < 0.4 ? '#16a34a' : bestScore < 0.8 ? '#d97706' : '#dc2626') + '">匹配质量: ' + matchQuality + '</span><br>' +
+    refInfo.map(function(n) { return '<span class="ref-sku">' + n + '</span>'; }).join(' ');
   document.getElementById('newRefInfo').style.display = 'block';
 
   // Auto-fill fee fields ONLY if empty
@@ -762,11 +769,13 @@ function calcNewProduct() {
 
   var rates = getFxRates();
   var fxCode = SITE_FX[site];
-  var fx = rates && rates[fxCode] ? rates[fxCode] : 1;
-
-  var localCogs = cogs * fx;
-  var localFirstLeg = firstLeg * fx;
-  var localDelivery = estDelivery * fx;
+  var siteFx = rates && rates[fxCode] ? rates[fxCode] : 1;
+  var cnyFx = rates && rates['CNY'] ? rates['CNY'] : 7.25;
+  // cogs & firstLeg are in CNY, convert: CNY → USD → site currency
+  // delivery estimate is in USD, convert: USD → site currency
+  var localCogs = cogs * siteFx / cnyFx;
+  var localFirstLeg = firstLeg * siteFx / cnyFx;
+  var localDelivery = estDelivery * siteFx;
 
   var totalPct = (estComm + estAd + estStor + estRefund + estVat + estLoss + estAdj + otherPct + profit) / 100;
   if (totalPct >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
