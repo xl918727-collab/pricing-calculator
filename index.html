@@ -159,7 +159,11 @@ tr.total td { border-top:2px solid #eab308; }
 </div>
 <div class="row">
 <div class="fg"><label>产品实重 kg <span style="color:#dc2626">*</span></label><input type="number" id="newWt" step="0.1" placeholder="如 3.5"></div>
-<div class="fg"><label>平均采购成本 ¥ <span class="u">可选</span></label><input type="number" id="newCogs" step="0.01" placeholder="不填则自动估算"></div>
+<div class="fg"><label>平均采购成本 ¥ <span style="color:#dc2626">*</span></label><input type="number" id="newCogs" step="0.01" placeholder="如 80"></div>
+</div>
+<div class="row">
+<div class="fg"><label>头程成本 ¥ <span style="color:#dc2626">*</span></label><input type="number" id="newFirstLeg" step="0.01" placeholder="如 15"></div>
+<div class="fg"><label>尾程配送费 <span class="u">自动估算</span></label><input type="number" id="newDelivery" class="auto" placeholder="匹配相似产品估算" readonly></div>
 </div>
 <div class="row">
 <div class="fg"><label>预期利润率 % <span style="color:#dc2626">*</span></label><input type="number" id="newProfit" step="0.1" value="20"></div>
@@ -177,7 +181,7 @@ tr.total td { border-top:2px solid #eab308; }
 <div class="fg"><label>其他费用(固定) <span class="u cost-label">$</span></label><input type="number" id="newOtherFee" step="0.01" value="0" placeholder="0"></div>
 </div>
 <div style="display:flex;gap:8px;margin-top:12px;">
-<button class="btn btn-calc" onclick="calcNewProduct()">🔍 匹配相似产品并测算</button>
+<button class="btn btn-calc" onclick="calcNewProduct()">🧮 匹配预测并计算定价</button>
 </div>
 <div id="newRefInfo" style="display:none;margin-top:10px;padding:10px;background:#f0fdf4;border-radius:6px;font-size:11px;">
 <b>参考产品（按尺寸重量相似度匹配）：</b><br>
@@ -662,7 +666,8 @@ function calcNewProduct() {
   var wid = parseFloat(document.getElementById('newWid').value) || 0;
   var hei = parseFloat(document.getElementById('newHei').value) || 0;
   var wt = parseFloat(document.getElementById('newWt').value) || 0;
-  var cogsUSD = parseFloat(document.getElementById('newCogs').value) || 0;
+  var cogs = parseFloat(document.getElementById('newCogs').value) || 0;
+  var firstLeg = parseFloat(document.getElementById('newFirstLeg').value) || 0;
   var profit = parseFloat(document.getElementById('newProfit').value) || 20;
   var otherPct = parseFloat(document.getElementById('newOtherPct').value) || 0;
   var otherFee = parseFloat(document.getElementById('newOtherFee').value) || 0;
@@ -671,13 +676,19 @@ function calcNewProduct() {
   if (!site) { toast('请选择站点'); return; }
   if (len <= 0 || wid <= 0 || hei <= 0) { toast('请填写完整的产品尺寸'); return; }
   if (wt <= 0) { toast('请填写产品重量'); return; }
+  if (cogs <= 0) { toast('请填写平均采购成本'); return; }
+  if (firstLeg <= 0) { toast('请填写头程成本'); return; }
 
   var volume = len * wid * hei;
-  // Find matching products in same site
+
+  // We don't have dimensions in the DB. Use delivery cost as a proxy for "size + weight" cost.
+  // Match by: find products in same site, take weighted average of delivery costs.
+  // Better approach: use the delivery_pu values to find products of similar shipping profile.
   var candidates = [];
   Object.keys(skuMap).forEach(function(s) {
     skuMap[s].forEach(function(d) {
       if (d.site !== site) return;
+      if (d.delivery_pu <= 0) return;
       candidates.push(d);
     });
   });
@@ -687,14 +698,15 @@ function calcNewProduct() {
     return;
   }
 
-  // Sort by delivery cost (proxy for product size)
+  // Take delivery costs as a proxy for product size profile.
+  // Sort by delivery cost, take the middle range as "typical" products for this site.
   candidates.sort(function(a, b) { return a.delivery_pu - b.delivery_pu; });
 
-  // Take middle 30% as representative
-  var start = Math.floor(candidates.length * 0.35);
-  var end = Math.ceil(candidates.length * 0.65);
+  // Use median range (25%-75%) as reference
+  var start = Math.floor(candidates.length * 0.25);
+  var end = Math.ceil(candidates.length * 0.75);
   var refs = candidates.slice(start, end);
-  if (refs.length === 0) refs = candidates.slice(0, 5);
+  if (refs.length < 3) refs = candidates.slice(0, Math.max(5, candidates.length));
 
   function avg(arr, field) {
     var sum = 0, cnt = 0;
@@ -702,8 +714,12 @@ function calcNewProduct() {
     return cnt > 0 ? sum / cnt : 0;
   }
 
-  // Auto-fill fee fields if empty
-  var fees = {
+  // Estimate delivery cost from similar products in same site (tail-end shipping is site-dependent)
+  var estDelivery = avg(refs, 'delivery_pu');
+  document.getElementById('newDelivery').value = estDelivery.toFixed(2);
+
+  // Auto-fill fee fields ONLY if they're empty (not if user entered 0)
+  var feeFields = {
     newComm: avg(refs, 'commission_pct'),
     newAd: avg(refs, 'ad_pct'),
     newStor: avg(refs, 'storage_pct'),
@@ -712,48 +728,44 @@ function calcNewProduct() {
     newLoss: avg(refs, 'loss_pct'),
     newAdj: avg(refs, 'adj_pct')
   };
-  Object.keys(fees).forEach(function(id) {
+  Object.keys(feeFields).forEach(function(id) {
     var el = document.getElementById(id);
-    if (!el.value || parseFloat(el.value) === 0) {
-      el.value = fees[id] > 0 ? fees[id].toFixed(1) : '';
+    if (el.value === '' || el.value === null) {
+      el.value = feeFields[id] > 0 ? feeFields[id].toFixed(1) : '';
       el.className = 'auto';
     }
   });
 
-  if (cogsUSD <= 0) {
-    cogsUSD = avg(refs, 'cogs_pu');
-    document.getElementById('newCogs').value = cogsUSD.toFixed(2);
-  }
+  // Read final fee values (user may have set them, including 0)
+  var estComm = parseFloat(document.getElementById('newComm').value);
+  var estAd = parseFloat(document.getElementById('newAd').value);
+  var estStor = parseFloat(document.getElementById('newStor').value);
+  var estRefund = parseFloat(document.getElementById('newRefund').value);
+  var estVat = parseFloat(document.getElementById('newVat').value);
+  var estLoss = parseFloat(document.getElementById('newLoss').value);
+  var estAdj = parseFloat(document.getElementById('newAdj').value);
+  // Treat NaN as 0
+  if (isNaN(estComm)) estComm = 0; if (isNaN(estAd)) estAd = 0; if (isNaN(estStor)) estStor = 0;
+  if (isNaN(estRefund)) estRefund = 0; if (isNaN(estVat)) estVat = 0; if (isNaN(estLoss)) estLoss = 0; if (isNaN(estAdj)) estAdj = 0;
 
-  // Read final values (user may have overridden)
-  var estFirstLeg = avg(refs, 'first_leg_pu');
-  var estDelivery = avg(refs, 'delivery_pu');
-  var estComm = parseFloat(document.getElementById('newComm').value) || 0;
-  var estAd = parseFloat(document.getElementById('newAd').value) || 0;
-  var estStor = parseFloat(document.getElementById('newStor').value) || 0;
-  var estRefund = parseFloat(document.getElementById('newRefund').value) || 0;
-  var estVat = parseFloat(document.getElementById('newVat').value) || 0;
-  var estLoss = parseFloat(document.getElementById('newLoss').value) || 0;
-  var estAdj = parseFloat(document.getElementById('newAdj').value) || 0;
-
-  // Convert to site currency for display
+  // All values are in USD from the data. Convert to site currency for display.
   var rates = getFxRates();
   var fxCode = SITE_FX[site];
   var fx = rates && rates[fxCode] ? rates[fxCode] : 1;
 
-  var localCogs = cogsUSD * fx;
-  var localFirstLeg = estFirstLeg * fx;
+  var localCogs = cogs * fx;
+  var localFirstLeg = firstLeg * fx;
   var localDelivery = estDelivery * fx;
 
   // Calculate selling price
   var totalPct = (estComm + estAd + estStor + estRefund + estVat + estLoss + estAdj + otherPct + profit) / 100;
-  if (totalPct >= 1) { toast('费用占比+利润率超过100%'); return; }
+  if (totalPct >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
   var sp = (localCogs + localFirstLeg + localDelivery) / (1 - totalPct);
   var curSym = CURRENCY[site] || '';
 
   document.getElementById('newFinalPrice').textContent = curSym + ' ' + sp.toFixed(2);
-  var fill = function(id, val) { document.getElementById(id).textContent = curSym + ' ' + val.toFixed(2); };
-  var fillP = function(id, val) { document.getElementById(id).textContent = (val/sp*100).toFixed(1) + '%'; };
+  function fill(id, val) { document.getElementById(id).textContent = curSym + ' ' + val.toFixed(2); }
+  function fillP(id, val) { document.getElementById(id).textContent = (val/sp*100).toFixed(1) + '%'; }
 
   fill('nrCogs', localCogs); fillP('nrCogsP', localCogs);
   fill('nrFirstLeg', localFirstLeg); fillP('nrFirstLegP', localFirstLeg);
@@ -767,14 +779,14 @@ function calcNewProduct() {
   fill('nrAdj', sp*estAdj/100); fillP('nrAdjP', sp*estAdj/100);
   document.getElementById('nrOther').textContent = curSym + ' ' + (sp*otherPct/100).toFixed(2);
   document.getElementById('nrOtherP').textContent = otherPct.toFixed(1) + '%';
-  document.getElementById('nrOtherFee').textContent = '--';
-  document.getElementById('nrOtherFeeP').textContent = '--';
+  document.getElementById('nrOtherFee').textContent = otherFee > 0 ? curSym + ' ' + otherFee.toFixed(2) : '--';
+  document.getElementById('nrOtherFeeP').textContent = otherFee > 0 ? (otherFee/sp*100).toFixed(1) + '%' : '--';
   document.getElementById('nrSP').textContent = curSym + ' ' + sp.toFixed(2);
   document.getElementById('nrProfit').textContent = curSym + ' ' + (sp*profit/100).toFixed(2);
   document.getElementById('nrProfitP').textContent = profit.toFixed(1) + '%';
 
   // Show reference SKUs
-  var refNames = refs.slice(0, 5).map(function(d) { return d.sku + ' (' + d.name + ')'; });
+  var refNames = refs.slice(0, 5).map(function(d) { return d.sku; });
   document.getElementById('newRefSkus').innerHTML = refNames.map(function(n) { return '<span class="ref-sku">' + n + '</span>'; }).join(' ');
   document.getElementById('newRefInfo').style.display = 'block';
 
