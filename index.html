@@ -195,8 +195,9 @@ function fmtPrice(price, site) {
 }
 
 // ---- EXCHANGE RATES (daily, cached in localStorage) ----
-var EXCHANGE_CACHE_KEY = 'fx_rates_v1';
-var EXCHANGE_CACHE_DATE_KEY = 'fx_rates_date';
+// All prices in the data are in USD. We convert to site currency AND CNY.
+var EXCHANGE_CACHE_KEY = 'fx_rates_v2';
+var EXCHANGE_CACHE_DATE_KEY = 'fx_rates_date_v2';
 
 function getFxRates() {
   var cached = localStorage.getItem(EXCHANGE_CACHE_KEY);
@@ -209,28 +210,18 @@ function getFxRates() {
 }
 
 function fetchAndCacheFxRates(cb) {
-  // Try free API: frankfurter.app (no key needed, updates daily)
-  fetch('https://api.frankfurter.app/latest?from=CNY')
+  // Get rates with USD as base (1 USD = ? other currencies)
+  fetch('https://api.frankfurter.app/latest?from=USD')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data && data.rates) {
-        // Convert: rates are "1 CNY = X units of currency"
-        // We want "1 unit of currency = Y CNY", so 1/rate
-        var rates = {};
-        Object.keys(data.rates).forEach(function(cur) {
-          rates[cur] = 1 / data.rates[cur];
-        });
-        rates['CNY'] = 1;
-        localStorage.setItem(EXCHANGE_CACHE_KEY, JSON.stringify(rates));
+        data.rates['USD'] = 1;
+        localStorage.setItem(EXCHANGE_CACHE_KEY, JSON.stringify(data.rates));
         localStorage.setItem(EXCHANGE_CACHE_DATE_KEY, new Date().toISOString().slice(0, 10));
-        cb(rates);
-      } else {
-        cb(null);
-      }
+        cb(data.rates);
+      } else { cb(null); }
     })
-    .catch(function() {
-      cb(null);
-    });
+    .catch(function() { cb(null); });
 }
 
 // Map site to FX currency code
@@ -240,15 +231,20 @@ var SITE_FX = {
   DK: 'DKK', PL: 'PLN', SE: 'SEK'
 };
 
+// price is in USD. Convert to site currency AND CNY.
 function fmtPriceWithCNY(price, site) {
   var curSymbol = CURRENCY[site] || '';
   var fxCode = SITE_FX[site];
   var rates = getFxRates();
-  if (price && fxCode && rates && rates[fxCode]) {
-    var cny = (price * rates[fxCode]).toFixed(2);
-    return curSymbol + ' ' + price + ' ≈ ¥ ' + cny;
+  if (price && fxCode && rates && rates[fxCode] && rates['CNY']) {
+    var localPrice = (price * rates[fxCode]).toFixed(2);
+    var cnyPrice = (price * rates['CNY']).toFixed(2);
+    if (fxCode === 'USD') {
+      return '$ ' + localPrice + ' ≈ ¥ ' + cnyPrice;
+    }
+    return curSymbol + ' ' + localPrice + ' ≈ ¥ ' + cnyPrice;
   }
-  return curSymbol + ' ' + (price || '--');
+  return curSymbol + ' ' + (price || '--') + ' (汇率未加载)';
 }
 
 // Try to preload rates on startup
