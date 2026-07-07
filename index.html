@@ -218,7 +218,7 @@ tr.total td { border-top:2px solid #eab308; }
 </div>
 </div>
 
-<div>
+<div id="pricingCard">
 <div class="card">
 <div class="card-title"><span class="bar"></span>定价参数</div>
 <div class="row">
@@ -659,6 +659,7 @@ function switchMode(mode) {
   });
   document.getElementById('existingProductMode').style.display = mode === 'existing' ? '' : 'none';
   document.getElementById('newProductMode').style.display = mode === 'new' ? 'block' : 'none';
+  document.getElementById('pricingCard').style.display = mode === 'existing' ? '' : 'none';
   document.getElementById('resultSection').classList.add('result-hidden');
   document.getElementById('newResultSection').classList.add('result-hidden');
 }
