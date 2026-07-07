@@ -596,9 +596,12 @@ function calc() {
   var otherFee = parseFloat(document.getElementById('otherFee').value) || 0;
   var profit = parseFloat(document.getElementById('profit').value) || 0;
   if (cogs <= 0) { toast('采购成本不能为0'); return; }
-  var totalPct = (commission + ad + storage + refund + vat + loss + adj + otherPct + profit + makeupTax) / 100;
-  if (totalPct >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
-  var sp = (cogs + firstLeg + delivery) / (1 - totalPct) + otherFee;
+  // VAT is applied to final price, not deducted from revenue
+  var nonVatPct = (commission + ad + storage + refund + loss + adj + otherPct + profit + makeupTax) / 100;
+  if (nonVatPct >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
+  var baseSp = (cogs + firstLeg + delivery) / (1 - nonVatPct) + otherFee;
+  var vatRate = VAT_RATES[site] || 0;
+  var sp = baseSp * (1 + vatRate / 100);
   document.getElementById('finalPrice').innerHTML = sp.toFixed(2) + (entry ? momSp(sp, entry) : '');
   // Calculate previous month SP for MoM comparison
   if (entry && entry._has_prev && !entry._prevSPCalculated) {
@@ -607,7 +610,8 @@ function calc() {
     var prevFirst = entry.first_leg_pu - (entry.mom.first_leg_pu||0);
     var prevDel = entry.delivery_pu - (entry.mom.delivery_pu||0);
     if (prevCogs > 0 && prevFirst > 0) {
-      entry._prevSP = (prevCogs + prevFirst + prevDel) / (1 - totalPct) + otherFee;
+      entry._prevSP = (prevCogs + prevFirst + prevDel) / (1 - nonVatPct) + otherFee;
+      if (vatRate > 0) entry._prevSP *= (1 + vatRate / 100);
     }
     entry._prevSPCalculated = true;
   }
@@ -629,9 +633,9 @@ function calc() {
   var refAmt = sp*refund/100;
   document.getElementById('rRefund').textContent = refAmt.toFixed(2);
   document.getElementById('rRefundP').textContent = refund.toFixed(1)+'%';
-  var vatAmt = sp*vat/100;
+  var vatAmt = baseSp * vatRate / 100;
   document.getElementById('rVat').textContent = vatAmt.toFixed(2);
-  document.getElementById('rVatP').textContent = vat.toFixed(1)+'%';
+  document.getElementById('rVatP').textContent = vatRate.toFixed(1)+'%';
   var mtAmt = sp*makeupTax/100;
   document.getElementById('rMakeupTax').textContent = mtAmt.toFixed(2);
   document.getElementById('rMakeupTaxP').textContent = makeupTax.toFixed(1)+'%';
@@ -797,9 +801,12 @@ function calcNewProduct() {
   var localFirstLeg = firstLeg * siteFx / cnyFx;
   var localDelivery = estDelivery * siteFx;
 
-  var totalPct = (estComm + estAd + estStor + estRefund + estVat + estLoss + estAdj + otherPct + profit) / 100;
-  if (totalPct >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
-  var sp = (localCogs + localFirstLeg + localDelivery) / (1 - totalPct);
+  // VAT applied to final price
+  var vatRate2 = VAT_RATES[site] || 0;
+  var nonVatPct2 = (estComm + estAd + estStor + estRefund + estLoss + estAdj + otherPct + profit) / 100;
+  if (nonVatPct2 >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
+  var baseSp2 = (localCogs + localFirstLeg + localDelivery) / (1 - nonVatPct2);
+  var sp = baseSp2 * (1 + vatRate2 / 100);
   var curSym = CURRENCY[site] || '';
 
   document.getElementById('newFinalPrice').textContent = curSym + ' ' + sp.toFixed(2);
