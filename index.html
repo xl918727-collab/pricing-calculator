@@ -375,6 +375,7 @@ var SITE_FX = {
   DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR', NL: 'EUR', BE: 'EUR', AT: 'EUR', FI: 'EUR',
   DK: 'DKK', PL: 'PLN', SE: 'SEK'
 };
+var VAT_RATES = {UK:20,DE:19,FR:20,IT:22,ES:21,NL:21,BE:21,CA:0,US:0,AU:0,PL:23,SE:25,DK:25,AT:20,FI:24};
 
 // price is in USD. Convert to site currency.
 function fmtPriceWithCNY(price, site) {
@@ -525,6 +526,7 @@ function onSiteChange() {
   setAuto('storage', entry.storage_pct, entry, 'storage_pct', 'pct');
   setAuto('refund', entry.refund_pct, entry, 'refund_pct', 'pct');
   setAuto('vat', VAT_RATES[site] || entry.vat_pct, entry, 'vat_pct', 'pct');
+  setAuto('makeupTax', entry.vat_pct, entry, 'vat_pct', 'pct');
   setAuto('loss', entry.loss_pct, entry, 'loss_pct', 'pct');
   setAuto('adj', entry.adj_pct, entry, 'adj_pct', 'pct');
 }
@@ -550,7 +552,7 @@ function setAuto(id, val, entry, field, momFunc) {
 }
 
 function clearAutoFields() {
-  ['cogs','firstLeg','delivery','commission','ad','storage','refund','vat','loss','adj'].forEach(function(id) {
+  ['cogs','firstLeg','delivery','commission','ad','storage','refund','vat','loss','adj','makeupTax'].forEach(function(id) {
     document.getElementById(id).value = '';
     document.getElementById(id).className = 'auto';
     var m = document.getElementById(id+'Mom'); if(m) m.innerHTML='';
@@ -579,10 +581,11 @@ function calc() {
   var loss = parseFloat(document.getElementById('loss').value) || 0;
   var adj = parseFloat(document.getElementById('adj').value) || 0;
   var otherPct = parseFloat(document.getElementById('otherPct').value) || 0;
+  var makeupTax = parseFloat(document.getElementById('makeupTax').value) || 0;
   var otherFee = parseFloat(document.getElementById('otherFee').value) || 0;
   var profit = parseFloat(document.getElementById('profit').value) || 0;
   if (cogs <= 0) { toast('采购成本不能为0'); return; }
-  var totalPct = (commission + ad + storage + refund + vat + loss + adj + otherPct + profit) / 100;
+  var totalPct = (commission + ad + storage + refund + vat + loss + adj + otherPct + profit + makeupTax) / 100;
   if (totalPct >= 1) { toast('费用占比+利润率超过100%，无法计算'); return; }
   var sp = (cogs + firstLeg + delivery) / (1 - totalPct) + otherFee;
   document.getElementById('finalPrice').innerHTML = sp.toFixed(2) + (entry ? momSp(sp, entry) : '');
@@ -618,6 +621,9 @@ function calc() {
   var vatAmt = sp*vat/100;
   document.getElementById('rVat').textContent = vatAmt.toFixed(2);
   document.getElementById('rVatP').textContent = vat.toFixed(1)+'%';
+  var mtAmt = sp*makeupTax/100;
+  document.getElementById('rMakeupTax').textContent = mtAmt.toFixed(2);
+  document.getElementById('rMakeupTaxP').textContent = makeupTax.toFixed(1)+'%';
   var lossAmt = sp*loss/100;
   document.getElementById('rLoss').textContent = lossAmt.toFixed(2);
   document.getElementById('rLossP').textContent = loss.toFixed(1)+'%';
