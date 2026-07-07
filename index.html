@@ -84,6 +84,7 @@ tr.total td { border-top:2px solid #eab308; }
 .estimate-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; }
 .ref-sku { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#e0e7ff; color:#3730a3; font-weight:600; margin:2px 3px; }
 #newProductMode { display:none; }
+#existingProductMode { }
 
 </style>
 </head>
@@ -648,7 +649,7 @@ function switchMode(mode) {
     t.classList.toggle('active', (i === 0 && mode === 'existing') || (i === 1 && mode === 'new'));
   });
   document.getElementById('existingProductMode').style.display = mode === 'existing' ? '' : 'none';
-  document.getElementById('newProductMode').style.display = mode === 'new' ? '' : 'none';
+  document.getElementById('newProductMode').style.display = mode === 'new' ? 'block' : 'none';
   document.getElementById('resultSection').classList.add('result-hidden');
   document.getElementById('newResultSection').classList.add('result-hidden');
 }
