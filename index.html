@@ -246,20 +246,16 @@ var SITE_FX = {
   DK: 'DKK', PL: 'PLN', SE: 'SEK'
 };
 
-// price is in USD. Convert to site currency AND CNY.
+// price is in USD. Convert to site currency.
 function fmtPriceWithCNY(price, site) {
   var curSymbol = CURRENCY[site] || '';
   var fxCode = SITE_FX[site];
   var rates = getFxRates();
-  if (price && fxCode && rates && rates[fxCode] && rates['CNY']) {
+  if (price && fxCode && rates && rates[fxCode]) {
     var localPrice = (price * rates[fxCode]).toFixed(2);
-    var cnyPrice = (price * rates['CNY']).toFixed(2);
-    if (fxCode === 'USD') {
-      return '$ ' + localPrice + ' ≈ ¥ ' + cnyPrice;
-    }
-    return curSymbol + ' ' + localPrice + ' ≈ ¥ ' + cnyPrice;
+    return curSymbol + ' ' + localPrice;
   }
-  return curSymbol + ' ' + (price || '--') + ' (汇率未加载)';
+  return curSymbol + ' ' + (price || '--');
 }
 
 // Try to preload rates on startup
