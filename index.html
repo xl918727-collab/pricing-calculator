@@ -175,11 +175,22 @@ tr.total td { border-top:2px solid #eab308; }
 </div>
 <div class="row">
 <div class="fg"><label>产品实重 kg <span style="color:#dc2626">*</span></label><input type="number" id="newWt" step="0.1" placeholder="如 3.5"></div>
-<div class="fg"><label>平均采购成本 ¥</label><input type="number" id="newCogs" step="0.01" placeholder="自动估算"></div>
+<div class="fg"><label>平均采购成本 ¥ <span class="u">可选</span></label><input type="number" id="newCogs" step="0.01" placeholder="不填则自动估算"></div>
 </div>
 <div class="row">
 <div class="fg"><label>预期利润率 % <span style="color:#dc2626">*</span></label><input type="number" id="newProfit" step="0.1" value="20"></div>
 <div class="fg"><label>其他费用占比 %</label><input type="number" id="newOtherPct" step="0.1" value="0"></div>
+</div>
+<div class="card-title" style="margin-top:14px;padding-bottom:6px;border-bottom-color:#f59e0b;"><span class="bar"></span>费用占比估算 <span class="estimate-badge">自动填充后可手动覆盖</span></div>
+<div class="fee-grid">
+<div class="fg"><label>平台佣金 <span class="u">%</span></label><input type="number" id="newComm" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>广告费 <span class="u">%</span></label><input type="number" id="newAd" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>仓储费 <span class="u">%</span></label><input type="number" id="newStor" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>退款损失 <span class="u">%</span></label><input type="number" id="newRefund" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>VAT税费 <span class="u">%</span></label><input type="number" id="newVat" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>报损盘亏 <span class="u">%</span></label><input type="number" id="newLoss" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>费用调整 <span class="u">%</span></label><input type="number" id="newAdj" class="auto" step="0.1" placeholder="自动估算"></div>
+<div class="fg"><label>其他费用(固定) <span class="u cost-label">$</span></label><input type="number" id="newOtherFee" step="0.01" value="0" placeholder="0"></div>
 </div>
 <div style="display:flex;gap:8px;margin-top:12px;">
 <button class="btn btn-calc" onclick="calcNewProduct()">🔍 匹配相似产品并测算</button>
@@ -653,7 +664,7 @@ function calcNewProduct() {
   var cogsUSD = parseFloat(document.getElementById('newCogs').value) || 0;
   var profit = parseFloat(document.getElementById('newProfit').value) || 20;
   var otherPct = parseFloat(document.getElementById('newOtherPct').value) || 0;
-  var otherFee = parseFloat(document.getElementById('newOtherPct').value) || 0; // fixed fee, same input for now
+  var otherFee = parseFloat(document.getElementById('newOtherFee').value) || 0;
 
   if (!sku) { toast('请输入SKU名称'); return; }
   if (!site) { toast('请选择站点'); return; }
@@ -661,13 +672,11 @@ function calcNewProduct() {
   if (wt <= 0) { toast('请填写产品重量'); return; }
 
   var volume = len * wid * hei;
-  // Find matching products in same site, score by volume & weight similarity
+  // Find matching products in same site
   var candidates = [];
   Object.keys(skuMap).forEach(function(s) {
     skuMap[s].forEach(function(d) {
       if (d.site !== site) return;
-      // We don't have dimensions in DB, so we use a different proxy: match by existing shipping cost patterns
-      // Use the actual logistics costs as the proxy for similarity
       candidates.push(d);
     });
   });
@@ -677,11 +686,10 @@ function calcNewProduct() {
     return;
   }
 
-  // Since we don't have dimensions in the DB, use median values from all existing products on this site
-  // as a reasonable estimate. Sort by delivery cost (proxy for size) to find nearest neighbors.
+  // Sort by delivery cost (proxy for product size)
   candidates.sort(function(a, b) { return a.delivery_pu - b.delivery_pu; });
 
-  // Take the middle 30% as representative
+  // Take middle 30% as representative
   var start = Math.floor(candidates.length * 0.35);
   var end = Math.ceil(candidates.length * 0.65);
   var refs = candidates.slice(start, end);
@@ -693,20 +701,39 @@ function calcNewProduct() {
     return cnt > 0 ? sum / cnt : 0;
   }
 
-  var estFirstLeg = avg(refs, 'first_leg_pu');
-  var estDelivery = avg(refs, 'delivery_pu');
-  var estComm = avg(refs, 'commission_pct');
-  var estAd = avg(refs, 'ad_pct');
-  var estStor = avg(refs, 'storage_pct');
-  var estRefund = avg(refs, 'refund_pct');
-  var estVat = avg(refs, 'vat_pct');
-  var estLoss = avg(refs, 'loss_pct');
-  var estAdj = avg(refs, 'adj_pct');
+  // Auto-fill fee fields if empty
+  var fees = {
+    newComm: avg(refs, 'commission_pct'),
+    newAd: avg(refs, 'ad_pct'),
+    newStor: avg(refs, 'storage_pct'),
+    newRefund: avg(refs, 'refund_pct'),
+    newVat: avg(refs, 'vat_pct'),
+    newLoss: avg(refs, 'loss_pct'),
+    newAdj: avg(refs, 'adj_pct')
+  };
+  Object.keys(fees).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el.value || parseFloat(el.value) === 0) {
+      el.value = fees[id] > 0 ? fees[id].toFixed(1) : '';
+      el.className = 'auto';
+    }
+  });
 
-  // If purchase cost not provided, estimate from similar products
   if (cogsUSD <= 0) {
     cogsUSD = avg(refs, 'cogs_pu');
+    document.getElementById('newCogs').value = cogsUSD.toFixed(2);
   }
+
+  // Read final values (user may have overridden)
+  var estFirstLeg = avg(refs, 'first_leg_pu');
+  var estDelivery = avg(refs, 'delivery_pu');
+  var estComm = parseFloat(document.getElementById('newComm').value) || 0;
+  var estAd = parseFloat(document.getElementById('newAd').value) || 0;
+  var estStor = parseFloat(document.getElementById('newStor').value) || 0;
+  var estRefund = parseFloat(document.getElementById('newRefund').value) || 0;
+  var estVat = parseFloat(document.getElementById('newVat').value) || 0;
+  var estLoss = parseFloat(document.getElementById('newLoss').value) || 0;
+  var estAdj = parseFloat(document.getElementById('newAdj').value) || 0;
 
   // Convert to site currency for display
   var rates = getFxRates();
