@@ -143,23 +143,6 @@ tr.total td { border-top:2px solid #eab308; }
 </div>
 </div>
 </div>
-<div>
-<div class="card">
-<div class="card-title"><span class="bar"></span>定价参数</div>
-<div class="row">
-<div class="fg"><label>预期利润率 <span class="u">%</span> <span style="color:#dc2626">*</span></label><input type="number" id="profit" step="0.1" value="20" placeholder="如 20"></div>
-<div class="fg"><label>其他费用占比 <span class="u">%（手动输入）</span></label><input type="number" id="otherPct" step="0.1" value="0" placeholder="如 1"></div>
-</div>
-<div style="display:flex;gap:8px;margin-top:12px;">
-<button class="btn btn-calc" onclick="calc()">查询计算</button>
-<button class="btn btn-reset" onclick="resetAll()">重置</button>
-</div>
-<div style="display:flex;gap:8px;margin-top:8px;">
-<button class="btn btn-save" id="btnSavePref" onclick="savePrefs()">💾 保存当前值为偏好</button>
-<button class="btn btn-load" id="btnLoadPref" onclick="loadPrefs()" disabled>📂 加载我的偏好</button>
-</div>
-</div>
-
 <div id="newProductMode">
 <div class="card">
 <div class="card-title"><span class="bar"></span>新品参数 <span class="new-badge">手工输入</span></div>
@@ -222,6 +205,23 @@ tr.total td { border-top:2px solid #eab308; }
 <tr class="total"><td style="color:#16a34a">预期利润</td><td id="nrProfit" style="color:#16a34a">--</td><td id="nrProfitP" style="color:#16a34a">--</td></tr>
 </tbody></table>
 </div>
+</div>
+</div>
+
+<div>
+<div class="card">
+<div class="card-title"><span class="bar"></span>定价参数</div>
+<div class="row">
+<div class="fg"><label>预期利润率 <span class="u">%</span> <span style="color:#dc2626">*</span></label><input type="number" id="profit" step="0.1" value="20" placeholder="如 20"></div>
+<div class="fg"><label>其他费用占比 <span class="u">%（手动输入）</span></label><input type="number" id="otherPct" step="0.1" value="0" placeholder="如 1"></div>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;">
+<button class="btn btn-calc" onclick="calc()">查询计算</button>
+<button class="btn btn-reset" onclick="resetAll()">重置</button>
+</div>
+<div style="display:flex;gap:8px;margin-top:8px;">
+<button class="btn btn-save" id="btnSavePref" onclick="savePrefs()">💾 保存当前值为偏好</button>
+<button class="btn btn-load" id="btnLoadPref" onclick="loadPrefs()" disabled>📂 加载我的偏好</button>
 </div>
 </div>
 
