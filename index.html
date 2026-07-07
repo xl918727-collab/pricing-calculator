@@ -736,6 +736,18 @@ function calcNewProduct() {
   document.getElementById('newRefSkus').innerHTML = 
     '<span style="color:' + (bestScore < 0.4 ? '#16a34a' : bestScore < 0.8 ? '#d97706' : '#dc2626') + '">匹配质量: ' + matchQuality + '</span><br>' +
     refInfo.map(function(n) { return '<span class="ref-sku">' + n + '</span>'; }).join(' ');
+  // If poor match, unlock delivery field for manual override
+  var delEl = document.getElementById('newDelivery');
+  if (bestScore >= 0.8) {
+    delEl.readOnly = false;
+    delEl.className = '';
+    delEl.style.border = '2px solid #dc2626';
+    document.getElementById('newRefSkus').innerHTML += '<br><span style="color:#dc2626;font-size:11px;">\u26a0\ufe0f 该站点无尺寸相近产品，尾程估算可能不准，建议手动输入尾程配送费</span>';
+  } else {
+    delEl.readOnly = true;
+    delEl.className = 'auto';
+    delEl.style.border = '';
+  }
   document.getElementById('newRefInfo').style.display = 'block';
 
   // Fee fields stay at user-set values (default 0), NOT auto-filled from reference products
