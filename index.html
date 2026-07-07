@@ -541,7 +541,7 @@ function setAuto(id, val, entry, field, momFunc) {
       val = (val * rates[fxCode]);
     }
   }
-  el.value = val > 0 ? val.toFixed(2) : '';
+  el.value = (isCost && val <= 0) ? '' : val.toFixed(isCost ? 2 : 1);
   el.className = 'auto';
   var momEl = document.getElementById(id + 'Mom');
   if (momEl && entry && field) {
