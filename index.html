@@ -829,11 +829,20 @@ function loadNewProductList() {
   var rates = getFxRates();
   listEl.innerHTML = saved.map(function(p, i) {
     var fx = (rates && rates[SITE_FX[p.site]]) ? rates[SITE_FX[p.site]] : 1;
-    var spLocal = (p.sp).toFixed(2);
+    var cnyFx = (rates && rates['CNY']) ? rates['CNY'] : 7.25;
+    var siteFx = fx;
+    // Recalculate price with current rates (so saved price stays up to date)
+    var localCogs = p.cogs * siteFx / cnyFx;
+    var localFirstLeg = p.firstLeg * siteFx / cnyFx;
+    var localDelivery = p.estDelivery * siteFx;
+    var totalPct = ((p.comm||0) + (p.ad||0) + (p.stor||0) + (p.refund||0) + (p.vat||0) + (p.loss||0) + (p.adj||0) + (p.otherPct||0) + (p.profit||0)) / 100;
+    var sp = totalPct >= 1 ? 0 : (localCogs + localFirstLeg + localDelivery) / (1 - totalPct);
+    var spLocal = sp > 0 ? sp.toFixed(2) : '--';
     var cur = CURRENCY[p.site] || '';
-    return '<div class="info-row" style="cursor:pointer" onclick="loadNewProduct(' + i + ')" title="点击加载此新品">' +
-      '<span class="l">' + p.sku + ' | ' + p.site + '</span>' +
-      '<span class="v">' + cur + ' ' + spLocal + '</span></div>';
+    return '<div class="info-row" style="cursor:pointer;align-items:center">' +
+      '<span class="l" onclick="loadNewProduct(' + i + ')" title="点击加载">' + p.sku + ' | ' + p.site + '</span>' +
+      '<span class="v" onclick="loadNewProduct(' + i + ')" title="点击加载">' + cur + ' ' + spLocal + '</span>' +
+      '<span style="cursor:pointer;color:#dc2626;font-size:14px;padding:0 4px;" onclick="deleteNewProduct(' + i + ')" title="删除">✕</span></div>';
   }).join('');
 }
 
@@ -860,6 +869,16 @@ function loadNewProduct(idx) {
   document.getElementById('newLoss').value = p.loss || '';
   document.getElementById('newAdj').value = p.adj || '';
   toast('已加载新品 "' + p.sku + '-' + p.site + '"');
+}
+function deleteNewProduct(idx) {
+  event.stopPropagation();
+  var saved = JSON.parse(localStorage.getItem('new_products') || '[]');
+  if (idx < 0 || idx >= saved.length) return;
+  var name = saved[idx].sku + '-' + saved[idx].site;
+  saved.splice(idx, 1);
+  localStorage.setItem('new_products', JSON.stringify(saved));
+  toast('已删除 "' + name + '"');
+  loadNewProductList();
 }
 // Init saved list on page load
 (function() { loadNewProductList(); })();
