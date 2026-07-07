@@ -33,6 +33,11 @@ select:focus,input:focus { outline:none; border-color:var(--p); box-shadow:0 0 0
 .btn-calc:hover { background:var(--ph); }
 .btn-calc:active { transform:scale(.98); }
 .btn-reset { background:#fff; color:var(--ts); border:1px solid var(--b); }
+.btn-save { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-size:12px; padding:8px 14px; }
+.btn-save:hover { background:#dcfce7; }
+.btn-load { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:12px; padding:8px 14px; }
+.btn-load:hover { background:#dbeafe; }
+.btn-load:disabled { opacity:0.4; cursor:default; }
 .result-hidden { display:none; }
 .result { animation:fadeIn .3s; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
@@ -125,6 +130,10 @@ tr.total td { border-top:2px solid #eab308; }
 <div style="display:flex;gap:8px;margin-top:12px;">
 <button class="btn btn-calc" onclick="calc()">查询计算</button>
 <button class="btn btn-reset" onclick="resetAll()">重置</button>
+</div>
+<div style="display:flex;gap:8px;margin-top:8px;">
+<button class="btn btn-save" id="btnSavePref" onclick="savePrefs()">💾 保存当前值为偏好</button>
+<button class="btn btn-load" id="btnLoadPref" onclick="loadPrefs()" disabled>📂 加载我的偏好</button>
 </div>
 </div>
 <div id="resultSection" class="result result-hidden">
@@ -379,6 +388,43 @@ function toast(m) {
   var t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
   setTimeout(function(){t.classList.remove('show')},2500);
 }
+
+// ---- PREFERENCE SAVE/LOAD ----
+var PREF_KEYS = ['profit','otherPct','otherFee','commission','ad','storage','refund','vat','loss','adj'];
+
+function savePrefs() {
+  var prefs = {};
+  PREF_KEYS.forEach(function(k) {
+    var v = document.getElementById(k).value;
+    if (v !== '') prefs[k] = v;
+  });
+  if (Object.keys(prefs).length === 0) { toast('没有可保存的值，请先填写费用占比'); return; }
+  localStorage.setItem('pricing_prefs', JSON.stringify(prefs));
+  document.getElementById('btnLoadPref').disabled = false;
+  toast('偏好已保存！(' + Object.keys(prefs).length + '项)');
+}
+
+function loadPrefs() {
+  var raw = localStorage.getItem('pricing_prefs');
+  if (!raw) { toast('尚未保存偏好'); return; }
+  var prefs = JSON.parse(raw);
+  var count = 0;
+  PREF_KEYS.forEach(function(k) {
+    if (prefs[k] !== undefined) {
+      document.getElementById(k).value = prefs[k];
+      document.getElementById(k).className = ''; // clear auto styling
+      count++;
+    }
+  });
+  toast('已加载偏好 (' + count + '项)');
+}
+
+// Check for saved prefs on load
+(function() {
+  if (localStorage.getItem('pricing_prefs')) {
+    document.getElementById('btnLoadPref').disabled = false;
+  }
+})();
 </script>
 </body>
 </html>
