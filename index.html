@@ -415,6 +415,12 @@ var skuDropdown = document.getElementById('skuDropdown');
 var selectedSku = null;
 var activeIdx = -1;
 
+// Precompute display names for each SKU
+var skuNames = {};
+Object.keys(skuMap).forEach(function(s) {
+  skuNames[s] = skuMap[s].map(function(d){return d.name;}).filter(function(v,i,a){return a.indexOf(v)===i&&v;}).join(' / ');
+});
+
 function renderDropdown(filter) {
   var matches = allSkus.filter(function(s) { return s.toUpperCase().indexOf(filter.toUpperCase()) !== -1; });
   skuDropdown.innerHTML = '';
@@ -428,7 +434,7 @@ function renderDropdown(filter) {
     var s = matches[i];
     var div = document.createElement('div');
     div.className = 'combo-item';
-    var names = skuMap[s].map(function(d){return d.name;}).filter(function(v,i,a){return a.indexOf(v)===i&&v;}).join(' / ');
+    var names = skuNames[s] || '';
     div.innerHTML = '<span class="sku-code">' + s + '</span><span class="sku-cat">' + names + '</span>';
     div.dataset.sku = s;
     div.addEventListener('mousedown', function(e) { selectSku(this.dataset.sku); });
@@ -450,12 +456,14 @@ function selectSku(sku) {
   onSkuChange();
 }
 
+var renderTimer = null;
 skuInput.addEventListener('input', function() {
   selectedSku = null;
   clearAutoFields();
   document.getElementById('skuInfo').style.display='none';
   document.getElementById('siteSel').innerHTML='<option value="">-- 先选SKU --</option>';
-  renderDropdown(skuInput.value);
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(function() { renderDropdown(skuInput.value); }, 100);
 });
 
 skuInput.addEventListener('focus', function() {
