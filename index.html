@@ -318,12 +318,11 @@ function momPct(val, entry, field) {
   return ' <span class="mom-down">↓'+Math.abs(d).toFixed(1)+'%</span>';
 }
 function momSp(val, entry, field) {
-  // For 建议售价 (calculated, not in data) - show MoM if prevSP exists
-  if (!entry._prevSP) return "";
-  var d = val - entry._prevSP;
-  if (Math.abs(d) < 0.01) return ' <span class="mom-flat">→</span>';
-  if (d > 0) return ' <span class="mom-up">↑'+d.toFixed(2)+'</span>';
-  return ' <span class="mom-down">↓'+Math.abs(d).toFixed(2)+'</span>';
+  if (!entry._prevSP || entry._prevSP <= 0) return "";
+  var pct = ((val - entry._prevSP) / entry._prevSP * 100);
+  if (Math.abs(pct) < 0.1) return ' <span class="mom-flat">→</span>';
+  if (pct > 0) return ' <span class="mom-up">↑' + pct.toFixed(1) + '%</span>';
+  return ' <span class="mom-down">↓' + Math.abs(pct).toFixed(1) + '%</span>';
 }
 
 var allSkus = Object.keys(skuMap).sort();
