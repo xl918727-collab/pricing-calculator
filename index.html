@@ -729,11 +729,11 @@ function reverseCalc() {
   var profitAmt = target - totalCost;
   var profitPct = (profitAmt / target * 100);
 
-  // Show result
-  document.getElementById('finalPrice').innerHTML = target.toFixed(2);
-  // Update result heading for reverse mode
+  // Show result for reverse mode: profit margin as the main display
   var pl = document.querySelector('#resultSection .price-box .pl');
-  if (pl) pl.textContent = '目标售价（原币）';
+  if (pl) pl.textContent = '预期利润率';
+  var fp = document.getElementById('finalPrice');
+  fp.innerHTML = '<span style="color:' + (profitPct >= 0 ? '#16a34a' : '#dc2626') + ';font-size:1.2em;">' + profitPct.toFixed(1) + '%</span>';
   document.getElementById('resultSection').classList.remove('result-hidden');
   
   // Build simplified result table for reverse mode
