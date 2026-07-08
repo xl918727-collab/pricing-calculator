@@ -79,12 +79,11 @@ tr.total td { border-top:2px solid #eab308; }
 .mom-flat { color:#94a3b8; font-size:9px; }
 .mom-tag { font-size:10px; margin-left:3px; white-space:nowrap; }
 
-/* Mode toggle — labels inside switch pill */
-.mode-tabs { display:inline-flex; position:relative; background:#e2e6eb; border-radius:10px; padding:3px; user-select:none; }
-.mode-tab { position:relative; z-index:1; padding:9px 24px; font-size:14px; font-weight:600; text-align:center; cursor:pointer; color:var(--ts); border:none; font-family:inherit; background:transparent; border-radius:8px; transition:color .25s; }
+/* Mode toggle — labels inside pill + sliding knob */
+.mode-tabs { display:inline-flex; position:relative; background:#e2e6eb; border-radius:26px; padding:4px; user-select:none; }
+.mode-tab { position:relative; z-index:1; padding:10px 26px; font-size:14px; font-weight:600; text-align:center; cursor:pointer; color:var(--ts); border:none; font-family:inherit; background:transparent; border-radius:22px; transition:color .25s; }
 .mode-tab.active { color:#fff; }
-.mode-tab.active::after { content:''; position:absolute; inset:0; background:var(--p); border-radius:8px; z-index:-1; }
-.mode-switch { display:none; }
+.mode-slider { position:absolute; top:4px; height:calc(100% - 8px); border-radius:22px; background:var(--p); transition:left .35s cubic-bezier(.34,1.3,.64,1),width .35s cubic-bezier(.34,1.3,.64,1); z-index:0; }
 .new-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; margin-left:6px; }
 .estimate-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; }
 .ref-sku { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#e0e7ff; color:#3730a3; font-weight:600; margin:2px 3px; }
@@ -102,6 +101,7 @@ tr.total td { border-top:2px solid #eab308; }
 
 <div style="text-align:center;padding:4px 0 8px;">
 <div class="mode-tabs" id="modeTabs">
+<div class="mode-slider" id="modeSlider"></div>
 <span class="mode-tab active" id="labelExisting" onclick="setMode('existing')">📊 财报数据</span>
 <span class="mode-tab" id="labelNew" onclick="setMode('new')">🆕 新品测算</span>
 </div>
@@ -789,6 +789,10 @@ var currentMode = 'existing';
 function setMode(mode) {
   if (mode === currentMode) return;
   currentMode = mode;
+  var target = document.getElementById(mode === 'existing' ? 'labelExisting' : 'labelNew');
+  var sl = document.getElementById('modeSlider');
+  sl.style.left = target.offsetLeft + 'px';
+  sl.style.width = target.offsetWidth + 'px';
   document.getElementById('labelExisting').classList.toggle('active', mode === 'existing');
   document.getElementById('labelNew').classList.toggle('active', mode === 'new');
   document.getElementById('existingProductMode').style.display = mode === 'existing' ? '' : 'none';
@@ -797,6 +801,12 @@ function setMode(mode) {
   document.getElementById('resultSection').classList.add('result-hidden');
   document.getElementById('newResultSection').classList.add('result-hidden');
 }
+// Init slider position
+(function() {
+  var t = document.getElementById('labelExisting');
+  var sl = document.getElementById('modeSlider');
+  if (t && sl) { sl.style.left = t.offsetLeft + 'px'; sl.style.width = t.offsetWidth + 'px'; }
+})();
 function switchMode(mode) { setMode(mode); } // legacy compat
 
 // ---- NEW PRODUCT MATCHING (dimension-aware) ----
