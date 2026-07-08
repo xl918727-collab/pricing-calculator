@@ -201,13 +201,15 @@ tr.total td { border-top:2px solid #eab308; }
 <div>
 <div id="pricingCard">
 <div class="card">
-<div class="card-title"><span class="bar"></span>定价参数</div>
+<div class="card-title"><span class="bar"></span>定价参数 <span class="new-badge" style="cursor:pointer;margin-left:8px;" id="reverseToggle" onclick="toggleReverse()">⇄ 反向定价</span></div>
 <div class="row">
-<div class="fg"><label>预期利润率 <span class="u">%</span> <span style="color:#dc2626">*</span></label><input type="number" id="profit" step="0.1" value="20" placeholder="如 20"></div>
+<div class="fg" id="fgProfit"><label>预期利润率 <span class="u">%</span> <span style="color:#dc2626">*</span></label><input type="number" id="profit" step="0.1" value="20" placeholder="如 20"></div>
+<div class="fg" id="fgTargetPrice" style="display:none"><label>目标售价 <span class="u cost-label" id="tpCur">$</span> <span style="color:#dc2626">*</span></label><input type="number" id="targetPrice" step="0.01" placeholder="如 199.99"></div>
 <div class="fg"><label>其他费用占比 <span class="u">%（手动输入）</span></label><input type="number" id="otherPct" step="0.1" value="0" placeholder="如 1"></div>
 </div>
 <div style="display:flex;gap:8px;margin-top:12px;">
-<button class="btn btn-calc" onclick="calc()">查询计算</button>
+<button class="btn btn-calc" id="btnForward" onclick="calc()">查询计算</button>
+<button class="btn btn-calc" id="btnReverse" onclick="reverseCalc()" style="display:none;background:#f59e0b;">反向计算利润率</button>
 <button class="btn btn-reset" onclick="resetAll()">重置</button>
 </div>
 <div style="display:flex;gap:8px;margin-top:8px;">
@@ -668,7 +670,101 @@ function resetAll() {
   clearAutoFields(); document.getElementById('skuInfo').style.display='none';
   document.getElementById('profit').value='20'; document.getElementById('otherPct').value='0';
   document.getElementById('otherFee').value='0';
+  document.getElementById('targetPrice').value='';
   document.getElementById('resultSection').classList.add('result-hidden');
+}
+
+var reverseMode = false;
+function toggleReverse() {
+  reverseMode = !reverseMode;
+  var tgl = document.getElementById('reverseToggle');
+  document.getElementById('fgProfit').style.display = reverseMode ? 'none' : '';
+  document.getElementById('btnForward').style.display = reverseMode ? 'none' : '';
+  document.getElementById('fgTargetPrice').style.display = reverseMode ? '' : 'none';
+  document.getElementById('btnReverse').style.display = reverseMode ? '' : 'none';
+  tgl.textContent = reverseMode ? '⇄ 正向定价' : '⇄ 反向定价';
+  tgl.style.background = reverseMode ? '#f59e0b' : '';
+  tgl.style.color = reverseMode ? '#fff' : '';
+  // Update currency label
+  var site = document.getElementById('siteSel').value;
+  document.getElementById('tpCur').textContent = CURRENCY[site] || '';
+  // If we have a calculated price, pre-fill target
+  var spVal = document.getElementById('finalPrice').textContent;
+  if (spVal && spVal !== '--') {
+    document.getElementById('targetPrice').value = spVal;
+  }
+}
+
+function reverseCalc() {
+  var sku = selectedSku || skuInput.value;
+  var site = document.getElementById('siteSel').value;
+  if (!sku || !site) { toast('请先选择 SKU 和站点'); return; }
+  var target = parseFloat(document.getElementById('targetPrice').value);
+  if (!target || target <= 0) { toast('请输入有效的目标售价'); return; }
+
+  var cogs = parseFloat(document.getElementById('cogs').value) || 0;
+  var firstLeg = parseFloat(document.getElementById('firstLeg').value) || 0;
+  var delivery = parseFloat(document.getElementById('delivery').value) || 0;
+  var commission = parseFloat(document.getElementById('commission').value) || 0;
+  var ad = parseFloat(document.getElementById('ad').value) || 0;
+  var storage = parseFloat(document.getElementById('storage').value) || 0;
+  var refund = parseFloat(document.getElementById('refund').value) || 0;
+  var vatRate = VAT_RATES[site] || 0;
+  var loss = parseFloat(document.getElementById('loss').value) || 0;
+  var adj = parseFloat(document.getElementById('adj').value) || 0;
+  var otherPct = parseFloat(document.getElementById('otherPct').value) || 0;
+  var makeupTax = parseFloat(document.getElementById('makeupTax').value) || 0;
+  var otherFee = parseFloat(document.getElementById('otherFee').value) || 0;
+  if (cogs <= 0) { toast('采购成本不能为0'); return; }
+
+  // Remove VAT from target to get base price
+  var basePrice = vatRate > 0 ? target / (1 + vatRate / 100) : target;
+
+  // Fee amounts based on target (VAT-inclusive for correct fee % matching)
+  var feePct = (commission + ad + storage + refund + loss + adj + otherPct + makeupTax) / 100;
+  var feeAmt = target * feePct;
+  var totalCost = cogs + firstLeg + delivery + feeAmt + otherFee;
+  var profitAmt = target - totalCost;
+  var profitPct = (profitAmt / target * 100);
+
+  // Show result
+  document.getElementById('finalPrice').innerHTML = target.toFixed(2);
+  document.getElementById('resultSection').classList.remove('result-hidden');
+  
+  // Build simplified result table for reverse mode
+  var feeItems = [
+    {id:'rCogs', val:cogs}, {id:'rFirstLeg', val:firstLeg}, {id:'rDelivery', val:delivery},
+    {id:'rComm', val:target*commission/100}, {id:'rAd', val:target*ad/100},
+    {id:'rStor', val:target*storage/100}, {id:'rRefund', val:target*refund/100},
+    {id:'rVat', val:basePrice*vatRate/100}, {id:'rMakeupTax', val:target*makeupTax/100},
+    {id:'rLoss', val:target*loss/100}, {id:'rAdj', val:target*adj/100},
+    {id:'rOther', val:target*otherPct/100}, {id:'rOtherFee', val:otherFee}
+  ];
+  feeItems.forEach(function(item) {
+    var el = document.getElementById(item.id);
+    if (el) el.textContent = item.val.toFixed(2);
+  });
+  // Percentages
+  document.getElementById('rCogsP').textContent = (cogs/target*100).toFixed(1)+'%';
+  document.getElementById('rFirstLegP').textContent = (firstLeg/target*100).toFixed(1)+'%';
+  document.getElementById('rDeliveryP').textContent = (delivery/target*100).toFixed(1)+'%';
+  document.getElementById('rCommP').textContent = commission.toFixed(1)+'%';
+  document.getElementById('rAdP').textContent = ad.toFixed(1)+'%';
+  document.getElementById('rStorP').textContent = storage.toFixed(1)+'%';
+  document.getElementById('rRefundP').textContent = refund.toFixed(1)+'%';
+  document.getElementById('rVatP').textContent = vatRate.toFixed(1)+'%';
+  document.getElementById('rMakeupTaxP').textContent = makeupTax.toFixed(1)+'%';
+  document.getElementById('rLossP').textContent = loss.toFixed(1)+'%';
+  document.getElementById('rAdjP').textContent = adj.toFixed(1)+'%';
+  document.getElementById('rOtherP').textContent = otherPct.toFixed(1)+'%';
+  document.getElementById('rOtherFeeP').textContent = (otherFee/target*100).toFixed(1)+'%';
+  document.getElementById('rSP').textContent = target.toFixed(2);
+  document.getElementById('rProfit').textContent = profitAmt.toFixed(2);
+  var rpp = document.getElementById('rProfitP');
+  rpp.textContent = profitPct.toFixed(1)+'%';
+  rpp.style.color = profitPct >= 0 ? '#16a34a' : '#dc2626';
+  var rp = document.getElementById('rProfit');
+  rp.style.color = profitPct >= 0 ? '#16a34a' : '#dc2626';
 }
 
 function toast(m) {
