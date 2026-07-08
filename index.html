@@ -608,6 +608,8 @@ function calc() {
   var baseSp = (cogs + firstLeg + delivery) / (1 - nonVatPct) + otherFee;
   var vatRate = VAT_RATES[site] || 0;
   var sp = baseSp * (1 + vatRate / 100);
+  // Restore heading for forward mode
+  document.querySelector('#resultSection .price-box .pl').textContent = '建议售价（原币）';
   document.getElementById('finalPrice').innerHTML = sp.toFixed(2) + (entry ? momSp(sp, entry) : '');
   // Calculate previous month SP for MoM comparison
   if (entry && entry._has_prev && !entry._prevSPCalculated) {
@@ -729,6 +731,9 @@ function reverseCalc() {
 
   // Show result
   document.getElementById('finalPrice').innerHTML = target.toFixed(2);
+  // Update result heading for reverse mode
+  var pl = document.querySelector('#resultSection .price-box .pl');
+  if (pl) pl.textContent = '目标售价（原币）';
   document.getElementById('resultSection').classList.remove('result-hidden');
   
   // Build simplified result table for reverse mode
