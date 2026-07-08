@@ -881,8 +881,9 @@ function loadNewProductList() {
     var localCogs = p.cogs * siteFx / cnyFx;
     var localFirstLeg = p.firstLeg * siteFx / cnyFx;
     var localDelivery = p.estDelivery * siteFx;
-    var totalPct = ((p.comm||0) + (p.ad||0) + (p.stor||0) + (p.refund||0) + (p.vat||0) + (p.loss||0) + (p.adj||0) + (p.otherPct||0) + (p.profit||0)) / 100;
-    var sp = totalPct >= 1 ? 0 : (localCogs + localFirstLeg + localDelivery) / (1 - totalPct);
+    var vatRate3 = VAT_RATES[p.site] || 0;
+    var nonVatPct3 = ((p.comm||0) + (p.ad||0) + (p.stor||0) + (p.refund||0) + (p.loss||0) + (p.adj||0) + (p.otherPct||0) + (p.profit||0)) / 100;
+    var sp = nonVatPct3 >= 1 ? 0 : (localCogs + localFirstLeg + localDelivery) / (1 - nonVatPct3) * (1 + vatRate3 / 100);
     var spLocal = sp > 0 ? sp.toFixed(2) : '--';
     var cur = CURRENCY[p.site] || '';
     return '<div class="info-row" style="cursor:pointer;align-items:center">' +
