@@ -79,14 +79,12 @@ tr.total td { border-top:2px solid #eab308; }
 .mom-flat { color:#94a3b8; font-size:9px; }
 .mom-tag { font-size:10px; margin-left:3px; white-space:nowrap; }
 
-/* Mode toggle — switch style */
-.mode-tabs { display:inline-flex; align-items:center; gap:12px; font-size:14px; font-weight:600; user-select:none; }
-.mode-tab { cursor:pointer; color:var(--ts); transition:color .2s; background:none; border:none; font-family:inherit; font-size:14px; font-weight:600; padding:0; }
-.mode-tab.active { color:var(--t); }
-.mode-switch { position:relative; width:52px; height:28px; border-radius:14px; background:#cbd5e1; cursor:pointer; transition:background .25s; flex-shrink:0; }
-.mode-switch.on { background:var(--p); }
-.mode-switch::after { content:''; position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .25s cubic-bezier(.34,1.56,.64,1); }
-.mode-switch.on::after { transform:translateX(24px); }
+/* Mode toggle — labels inside switch pill */
+.mode-tabs { display:inline-flex; position:relative; background:#e2e6eb; border-radius:10px; padding:3px; user-select:none; }
+.mode-tab { position:relative; z-index:1; padding:9px 24px; font-size:14px; font-weight:600; text-align:center; cursor:pointer; color:var(--ts); border:none; font-family:inherit; background:transparent; border-radius:8px; transition:color .25s; }
+.mode-tab.active { color:#fff; }
+.mode-tab.active::after { content:''; position:absolute; inset:0; background:var(--p); border-radius:8px; z-index:-1; }
+.mode-switch { display:none; }
 .new-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; margin-left:6px; }
 .estimate-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:700; }
 .ref-sku { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:#e0e7ff; color:#3730a3; font-weight:600; margin:2px 3px; }
@@ -105,7 +103,6 @@ tr.total td { border-top:2px solid #eab308; }
 <div style="text-align:center;padding:4px 0 8px;">
 <div class="mode-tabs" id="modeTabs">
 <span class="mode-tab active" id="labelExisting" onclick="setMode('existing')">📊 财报数据</span>
-<div class="mode-switch on" id="modeSwitch" onclick="toggleSwitch()"></div>
 <span class="mode-tab" id="labelNew" onclick="setMode('new')">🆕 新品测算</span>
 </div>
 </div>
@@ -792,18 +789,13 @@ var currentMode = 'existing';
 function setMode(mode) {
   if (mode === currentMode) return;
   currentMode = mode;
-  var sw = document.getElementById('modeSwitch');
   document.getElementById('labelExisting').classList.toggle('active', mode === 'existing');
   document.getElementById('labelNew').classList.toggle('active', mode === 'new');
-  sw.classList.toggle('on', mode === 'existing');
   document.getElementById('existingProductMode').style.display = mode === 'existing' ? '' : 'none';
   document.getElementById('newProductMode').style.display = mode === 'new' ? 'block' : 'none';
   document.getElementById('pricingCard').style.display = mode === 'existing' ? '' : 'none';
   document.getElementById('resultSection').classList.add('result-hidden');
   document.getElementById('newResultSection').classList.add('result-hidden');
-}
-function toggleSwitch() {
-  setMode(currentMode === 'existing' ? 'new' : 'existing');
 }
 function switchMode(mode) { setMode(mode); } // legacy compat
 
