@@ -22,12 +22,12 @@ header p { color:var(--ts); margin-top:4px; font-size:13px; }
 .row3 { grid-template-columns:1fr 1fr 1fr; }
 .row1 { grid-template-columns:1fr; }
 .fg { display:flex; flex-direction:column; }
-.fg label { font-size:12px; font-weight:500; color:var(--ts); margin-bottom:3px; }
+.fg label { font-size:12px; font-weight:500; color:var(--ts); margin-bottom:3px; min-height:18px; }
 .fg label .u { font-weight:400; color:#94a3b8; }
 select,input { font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--b); border-radius:6px; background:#fff; color:var(--t); width:100%; }
 select:focus,input:focus { outline:none; border-color:var(--p); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
 .auto { background:var(--abg); border-color:var(--ab); }
-.fee-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px 10px; }
+.fee-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px 10px; align-items:start; }
 @media(max-width:500px){ .fee-grid{grid-template-columns:1fr 1fr} }
 .btn { font-family:inherit; font-size:14px; font-weight:600; padding:10px 20px; border:none; border-radius:6px; cursor:pointer; transition:.15s; }
 .btn-calc { background:var(--p); color:#fff; width:100%; }
