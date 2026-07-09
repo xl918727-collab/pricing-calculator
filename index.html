@@ -1041,7 +1041,6 @@ function filterSavedList() {
   });
 }
 function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-}
 
 function loadNewProduct(idx) {
   var saved = JSON.parse(localStorage.getItem('new_products') || '[]');
