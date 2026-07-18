@@ -12,6 +12,12 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sa
 header { text-align:center; padding:28px 0 20px; }
 header h1 { font-size:26px; font-weight:700; }
 header p { color:var(--ts); margin-top:4px; font-size:13px; }
+/* FX rate warning banner */
+.fx-warn { display:none; background:#fef2f2; border:2px solid #dc2626; border-radius:8px; padding:10px 16px; margin-bottom:12px; text-align:center; }
+.fx-warn.show { display:block; }
+.fx-warn strong { color:#dc2626; }
+.fx-ok { display:inline-block; background:#f0fdf4; color:#16a34a; font-size:11px; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle; }
+.fx-ok.warn { background:#fef2f2; color:#dc2626; }
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
 @media(max-width:820px){ .grid{grid-template-columns:1fr} }
 .card { background:var(--card); border-radius:var(--r); box-shadow:var(--s); padding:20px; margin-bottom:14px; transition:box-shadow .2s,transform .15s; }
@@ -95,9 +101,11 @@ tr.total td { border-top:2px solid #eab308; }
 <body>
 <div class="container">
 <header>
-<h1>定价测算工具</h1>
+<h1>定价测算工具 <span id="fxStatus" class="fx-ok">✓ FX</span></h1>
 <p>基于 eBay 2026年4-6月实际财报数据 | 600条 SKU x 站点 成本基准（加权平均） | 排除渠道其他费 & 税务成本</p>
 </header>
+
+<div id="fxWarn" class="fx-warn"><strong>⚠️ 汇率数据加载失败</strong> — 所有价格显示为<strong>原始美元（USD）</strong>，未转换为站点币种。请刷新页面重试。</div>
 
 <div style="text-align:center;padding:4px 0 8px;">
 <div class="mode-tabs" id="modeTabs">
@@ -409,6 +417,32 @@ if (!getFxRates()) {
   cacheRates(FALLBACK_RATES);
 }
 
+// Self-diagnostic: verify rates are loaded and show warning if not.
+// This is the permanent guard against silent currency conversion failures.
+function validateRates() {
+  var rates = getFxRates();
+  var warn = document.getElementById('fxWarn');
+  var status = document.getElementById('fxStatus');
+  if (!rates) {
+    if (warn) warn.classList.add('show');
+    if (status) { status.textContent = '✗ FX'; status.className = 'fx-ok warn'; }
+    return false;
+  }
+  // Verify all site currencies have a rate
+  var allOk = true;
+  Object.keys(SITE_FX).forEach(function(site) {
+    var code = SITE_FX[site];
+    if (!rates[code]) allOk = false;
+  });
+  if (!allOk) {
+    if (warn) warn.classList.add('show');
+    if (status) { status.textContent = '✗ FX'; status.className = 'fx-ok warn'; }
+    return false;
+  }
+  if (warn) warn.classList.remove('show');
+  if (status) { status.textContent = '✓ FX'; status.className = 'fx-ok'; }
+  return true;
+}
 function useFallback(cb) {
   cacheRates(FALLBACK_RATES);
   cb(FALLBACK_RATES);
@@ -421,6 +455,9 @@ var SITE_FX = {
   DK: 'DKK', PL: 'PLN', SE: 'SEK'
 };
 var VAT_RATES = {UK:20,DE:19,FR:20,IT:22,ES:21,NL:21,BE:21,CA:0,US:0,AU:0,PL:23,SE:25,DK:25,AT:20,FI:24};
+
+// Run self-diagnostic now that all dependencies are defined
+validateRates();
 
 // price is in USD. Convert to site currency.
 function fmtPriceWithCNY(price, site) {
@@ -437,6 +474,7 @@ function fmtPriceWithCNY(price, site) {
 // Always try to refresh with live rates (fallback already seeded synchronously above)
 (function() {
   fetchAndCacheFxRates(function(rates) {
+    validateRates();  // Update the FX status indicator
     if (!rates) return;
     // Refresh price display if a product is already selected
     var sku = selectedSku || skuInput.value;
@@ -630,6 +668,7 @@ function updateResultLabels(site) {
 }
 
 function calc() {
+  if (!validateRates()) { toast('⚠️ 汇率数据不可用，无法计算'); return; }
   var sku = selectedSku || skuInput.value;
   var site = document.getElementById('siteSel').value;
   if (!sku || !site) { toast('请先选择 SKU 和站点'); return; }
@@ -855,6 +894,7 @@ function switchMode(mode) { setMode(mode); } // legacy compat
 
 // ---- NEW PRODUCT MATCHING (dimension-aware) ----
 function calcNewProduct() {
+  if (!validateRates()) { toast('⚠️ 汇率数据不可用，无法计算'); return; }
   var sku = document.getElementById('newSku').value.trim();
   var site = document.getElementById('newSite').value;
   var len = parseFloat(document.getElementById('newLen').value) || 0;
