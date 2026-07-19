@@ -411,11 +411,21 @@ var FALLBACK_RATES = {
   CAD: 1.37, DKK: 6.85, PLN: 3.95, SEK: 10.30
 };
 
-// Synchronously seed fallback rates so getFxRates() NEVER returns null.
-// The async frankfurter.app fetch below will overwrite with live rates on success.
-if (!getFxRates()) {
-  cacheRates(FALLBACK_RATES);
-}
+// UNCONDITIONALLY set in-memory rates first — the simplest, most reliable approach.
+// This works regardless of localStorage, browser, protocol, or caching.
+_memRates = FALLBACK_RATES;
+_memRatesDate = new Date().toISOString().slice(0, 10);
+
+// Then try to load better rates from localStorage (only updates if fresh)
+try {
+  var _cached = localStorage.getItem(EXCHANGE_CACHE_KEY);
+  var _cachedDate = localStorage.getItem(EXCHANGE_CACHE_DATE_KEY);
+  var _today = new Date().toISOString().slice(0, 10);
+  if (_cached && _cachedDate === _today) {
+    var _parsed = JSON.parse(_cached);
+    if (_parsed && _parsed['USD']) { _memRates = _parsed; _memRatesDate = _today; }
+  }
+} catch(e) { /* localStorage blocked — keep fallback */ }
 
 // Self-diagnostic: verify rates are loaded and show warning if not.
 // This is the permanent guard against silent currency conversion failures.
